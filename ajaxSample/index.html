@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<head>
+    <title>Todo List Basic</title>
+    <link rel="stylesheet" href="bootstrap.css" />
+	<script src="http://code.jquery.com/jquery-1.10.2.js"></script>
+	<script src="js/jquery-1.11.0.js"></script>
+    <script src="js/sammy.js"></script>
+    <script src="js/common.js"></script>
+
+
+    <!-- 페이지 라우트 -->
+    <script>
+        var app = Sammy(function () {
+        	
+            var checkLogin = function (successCallback, failCallback) {
+            	
+            	  console.log("세션값 : "+ userSessionToken); 
+            	
+                // 로그인 상태 확인  	
+                $.ajax({
+                	  type: 'GET',
+                	  headers: {'X-Parse-Application-Id':'RSU6lifgLRciaTn60UdVU3x4STG3IHRAqgtf9aFI','X-Parse-REST-API-Key':'5EBGWjMdh4ThyDhkM0V5coIB6yqUUjv7Xjr13lpm', 'X-Parse-Session-Token':userSessionToken}, 
+                	  
+                	  url: "https://api.parse.com/1/users/me",
+                	  contentType: "application/json", 
+                  	  timeout:30000,
+                	  // dataType: "text", 
+                	  success: function (xhr, result) {
+                		  console.log("로그인 상태"); 
+                          successCallback();
+                      },
+                      error: function () {
+                    	  console.log("로그아웃 상태"); 
+                          failCallback();
+                      }
+                	  
+                	});
+            	
+            };
+
+            this.get('#login', function () {
+                checkLogin(function () {
+                    // 로그인되어 있음
+                    location.hash = 'main';
+                }, function () {
+                    // 변수를 선언합니다.
+                    var template = $('#login-template').html();
+
+                    // 화면에 출력합니다.
+                    $(document.body).html(template);
+
+                    // 이벤트를 연결합니다.
+                    $('form').submit(function (event) {
+                        // 변수를 선언합니다.
+                        var login = $('#login').val();
+                        var password = $('#password').val();
+
+                        if(login == "") alert('로그인ID를 입력해주세요');
+                        else if(password == "")   alert('비밀번호를 입력해주세요');
+                        else { 
+
+                        	
+                        // 로그인 연동  	
+                        $.ajax({
+                        	  type: 'GET',
+                        	  headers: parseHeaders, 
+                        	  url: "https://api.parse.com/1/login",
+                              data: {
+                                "username": login,
+                                 "password": password
+                              },
+                        	  contentType: "application/json", 
+                          	  timeout:30000,
+                        	  // dataType: "text", 
+                              success: function (json) {
+                                  // 로그인 성공
+
+                                  userSessionToken = json.sessionToken;
+                                  console.log("세션값 : " + userSessionToken);  
+                                  
+                                  location.hash = 'main';
+                                  
+                                  console.log(login + " :  로그인 성공");  
+                              },
+                              error: function () {
+                                  // 로그인 실패
+                                  
+                                  alert('로그인에 실패했습니다.');
+                                  $('#login').val('');
+                                  $('#password').val('');
+                              }
+                        	  
+                        	});
+                        
+                        } 
+                  
+                        // 기본 이벤트를 제거합니다.
+                        event.preventDefault();
+                    });
+                });
+            });
+
+            this.get('#register', function () {
+                checkLogin(function () {
+                    // 로그인되어 있음
+                    location.hash = 'main';
+                }, function () {
+                    // 변수를 선언합니다.
+                    var template = $('#register-template').html();
+
+                    // 화면에 출력합니다.
+                    $(document.body).html(template);
+
+                    // 이벤트를 연결합니다.
+                    $('form').submit(function (event) {
+                        // 변수를 선언합니다.
+                        var login = $('#login').val();
+                        var password = $('#password').val();
+                        var confirm = $('#confirm-password').val();
+
+                        if(login == "") alert('가입할 ID를 입력해주세요');
+                        else if(password == "")   alert('비밀번호를 입력해주세요');
+                        else if(confirm == "")   alert('확인용 비밀번호를 입력해주세요');
+                        else if(password != confirm)   alert('비밀번호 확인이 일치하지 않습니다.');
+                        else { 
+                        
+                        
+                        $.ajax({
+                      	  type: "POST",
+                      	  headers: parseHeaders, 
+                      	  url: "https://api.parse.com/1/users",
+                      	  data:  JSON.stringify({
+                      		  	"username":login,
+                      		  	"password":password
+                      		  	}), 
+                      	  contentType: "application/json", 
+                          timeout:30000,
+                      	  // dataType: "text", 
+                            success: function (json) {
+                                // 가입 성공
+                                
+                                location.hash = 'login';
+                                
+                                console.log(login + " :  가입성공");  
+                            },
+                            error: function () {
+                                // 가입 실패
+                                $('#login').val('');
+                                $('#password').val('');
+                                $('#confirm-password').val('');
+                                
+                                alert('가입에 실패했습니다.');
+                            }
+                      	  
+                      	});
+                        
+                        } 
+
+
+                        // 기본 이벤트를 제거합니다.
+                        event.preventDefault();	
+                    });
+                });
+            });
+            
+            
+            
+            
+			// 게시물 리스트 조회하면 
+            this.get('#main', function () {
+
+         	 	checkLogin(function () {
+            	
+            		$(document.body).html($('#main-template').html());
+            		
+            		 var output = '';
+            		
+     				// 게시물 리스트 조회 	
+                    $.ajax({
+                    	  type: 'GET',
+                    	  headers: parseHeaders, 
+                    	  url: "https://api.parse.com/1/classes/MessageBoard",
+                    	  timeout:30000,
+                          data: {
+                              order: "-createdAt",
+                              limit: "10", 
+                              keys: "message,completed"
+                          },
+                          success: function (json) {
+                              // 로그인 성공
+                              
+                              $(document.body).html($('#main-template').html());
+                              
+                              var data = json.results; 
+                              $.each(data, function (index, item) {
+                                  // 변수를 선언합니다.
+                                 output = '';
+                                  
+                                  output += '<label data-id="' + item.objectId + 
+                                      '" class="checkbox">';
+                                   if ( item.completed ) {
+                                      output += '<input type="checkbox" checked="checked" />';
+                                  } else {
+                                      output += '<input type="checkbox" />';
+                                  }
+                                  
+                                  var dateStr = new Date(item.createdAt); 
+                                  output += '    <span>결과 : ' + item.message + ' [' + dateStr.toLocaleString() + ']</span>';
+                                  output += '</label>';
+                                  // 화면에 출력합니다.
+                                  $(output).css('opacity', item.completed ? 0.5 : '').appendTo('#todos'); 
+                              });
+                              
+                              
+                              // 이벤트를 연결합니다.
+                              $('#logout').click(function (event) {
+                                   // 로그아웃을 수행합니다.
+                                  userSessionToken = ""; 
+                                  // 기본 이벤트를 제거합니다.
+                                  location.hash = 'login';
+                                  event.preventDefault();
+
+                              });
+                              
+                              // 게시물 등록
+                              $('#item-form').submit(function (event) {
+                                  // 변수를 선언합니다.
+                                  var title = $('#title').val();
+                                  
+                                  console.log(title); 
+                                  
+            	                     $.ajax({
+                                  	  type: 'POST',
+                                  	  headers: parseHeaders, 
+                                  	  url: "https://api.parse.com/1/classes/MessageBoard",
+                                  	  contentType: "application/json", 
+                                  	  timeout:30000,
+                                        data: JSON.stringify({
+                                            "message": title,
+                                            "username": "곽채화", 
+                                            "completed": true
+                                        }),
+                                        success: function (item) {
+                                          
+                                              
+                                          var newOutput = ""; 
+                                          
+                                          newOutput += '<label data-id="' + item.objectId + '" class="checkbox">';
+                                          newOutput += '<input type="checkbox" />';
+                                      
+                                          var dateStr = new Date(item.createdAt); 
+                                          newOutput += '<input type="checkbox" />';
+                                          newOutput += '    <span>결과 : ' + title + ' [' + dateStr.toLocaleString() + ']</span>';
+                                          newOutput += '</label>';
+                                          // 화면에 출력합니다.
+                                          output = output + newOutput; 
+                                          $('#todos').append(output);
+
+                                          // 입력 양식을 비웁니다.
+                                          $('#title').val('');
+                      
+                                        },
+                                        error: function () {
+                                      	  alert('게시물 등록 오류가 발생했습니다.');
+                                        }
+                                  	} );  
+                                  
+                               
+                                  // 기본 이벤트를 제거합니다.
+                                  event.preventDefault();
+                              });
+                              
+                              
+                            // 게시물 삭제  
+                            $('#remove-btn').click(function (event) {
+                            // 데이터를 제거합니다.
+                            $(':checked').each(function () {
+                                // 변수를 선언합니다.
+                                var id = $(this).parent().attr('data-id');
+                                // Ajax 요청을 수행합니다.
+                                $.ajax('/todos/' + id, {
+                                    type: 'DELETE',
+                                    data: { dummy: new Date().getTime() },
+                                    success: function () {
+                                        $(this).parent().remove();
+                                    }.bind(this)
+                                });
+                            })
+                            // 기본 이벤트를 제거합니다.
+                            event.preventDefault();
+                        });
+               
+                              
+               				
+                          },
+                          error: function () {
+                          	  alert('오류가 발생했습니다.....');
+                            } 
+                          
+                    	});
+                  	
+        
+            		
+   
+     				
+  
+            	
+                    
+                    
+                }, function () {
+                    // 로그인되어 있지 않음
+                    location.hash = 'login';
+                }); 
+           
+ 
+            });
+        });
+    </script>
+    <!-- 페이지 준비 완료 -->
+    <script>
+        $(document).ready(function () {
+            app.run('#login');
+        });
+    </script>
+    <!-- 로그인 템플릿 -->
+    <script id="login-template" type="text/template">
+        <div class="container">
+            <h1>Login</h1>
+            <form>
+                <label>Username</label>
+                <input id="login" type="text" value="chime" />
+                <label>Password</label>
+                <input id="password" type="password" value="chime" />
+                <br />
+                <input type="submit" class="btn btn-primary" value="Login" />
+                <a class="btn" href="#register">Register</a>
+            </form>
+        </div>
+    </script>
+    <!-- 가입 템플릿 -->
+    <script id="register-template" type="text/template">
+        <div class="container">
+            <h1>Register</h1>
+            <form>
+                <label>Username</label>
+                <input id="login" type="text" />
+                <label>Password</label>
+                <input id="password" type="password" />
+                <label>Confirm Password</label>
+                <input id="confirm-password" type="password" /><br />
+                <br />
+                <input type="submit" class="btn btn-primary" value="Sign up" />
+                <a class="btn" href="#login">Login</a>
+            </form>
+        </div>
+    </script>
+    <!-- 메인 페이지 템플릿 -->
+    <script id="main-template" type="text/template">
+        <div class="container">
+            <a id="logout" class="logout btn-link pull-right">Logout</a>
+            <h1>Todos</h1>
+            <ul id="todos" class="unstyled">
+            </ul>
+            <form id="item-form" class="form-inline">
+                <input id="title" type="text" />
+                <button class="btn btn-success">Add</button>
+            </form>
+            <p><a id="remove-btn" class="btn btn-danger">Remove items</a></p>
+        </div>
+    </script>
+</head>
+<body>
+
+</body>
+</html>
